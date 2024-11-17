@@ -1,4 +1,7 @@
 
+import os
+import argparse
+
 # CRC polynomial 0xedb88320, little-endian
 table =  [
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -51,9 +54,20 @@ def crc32( Data, crc = 0xFFFFFFFF):
         crc = (crc >> 8) ^ (table[(crc ^ by) & 0xFF])
     return crc ^ 0xFFFFFFFF
 
-path = "/Volumes/32 GB/Jet Force Gemini (USA).z64"
-f = open(path, 'rb')
-data = f.read(size)
-f.close()
+if __name__ == "__main__":
 
-print(hex(crc32(data)))
+    parser = argparse.ArgumentParser(__file__, description="Runs CRC32 calculation on files")
+    parser.add_argument("input", nargs="+", help="List of input files.")
+
+    args = parser.parse_args()
+
+    print("\nRunning CRC32 ...")
+    for path in args.input:
+
+        f = open(path, 'rb')
+        data = f.read(os.path.getsize(path))
+        f.close()
+
+        crc = hex(crc32(data)).upper()[2:]
+        print(f" {crc} {path}")
+    print("")

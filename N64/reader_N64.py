@@ -5,6 +5,7 @@ import math
 import certifi
 import argparse
 
+from crc32 import crc32
 from arduino import Arduino
 from rich.progress import track
 from urllib.request import urlopen
@@ -47,11 +48,12 @@ def cartridge_db():
 
 # command line arguments
 parser = argparse.ArgumentParser('reader_N64.py', 'Program to read N64 ROMs over USB.')
+parser.add_argument('--port', default='/dev/ttyACM0', help='Port address. Typically /dev/ttyACM0 on linux, COM# on Windows, /dev/tty.usbmodem# on Mac OS.')
 parser.add_argument('--header', action='store_true', help='Only read ROM header information.')
 args = parser.parse_args()
 
 # open connection to Arduino MEGA 2560
-a = Arduino(baud=500000)
+a = Arduino(port=args.port, baud=500000)
 
 # get sector size used for dumping ROM
 a.write("#SCSIZE$")
@@ -60,43 +62,50 @@ sector_size = int.from_bytes(a.read(4), "big")
 # get ROM header
 print("\nReading ROM header")
 a.write("#HEADER$")
-header = a.read(64)
+header = a.read(64, check_word=True)
 print(f"  - received {len(header)} bytes")
 print(f"  - payload  {bytes(header)}")
 
 # parse header info
 rom_ver, rom_name, rom_checksum = header_info(header)
 print("\nROM Info")
-print(f"  - name     '{rom_name}'")
-print(f"  - version  '{rom_ver}'")
-print(f"  - checksum '{rom_checksum}'")
+print(f"  - name:     {rom_name}")
+print(f"  - version:  {rom_ver}")
+print(f"  - checksum: {rom_checksum}")
 
 # use header info to lookup database entry
 print("\nDatabase Info")
 db = cartridge_db()
-file = None
-size = None
+matches = []
 for file, item in db.items():
-    key = file.upper()
-    if ", THE" in key:
-        key = "THE " + key.replace(", THE", "")
-    if rom_name in key and rom_checksum == item['checksum']:
-        crc = item['crc']
-        size = item['size']
-        print(f"  - file:  {file}")
-        print(f"  - size:  {size} MB")
-        print(f"  - crc32: {crc} ")
-        break
+    if rom_checksum == item['checksum']:
+        matches.append(file)
 
-#file = 'test.txt'
-#size = 8
-
-if size is None:
+if len(matches) == 0:
     raise ValueError("Could not locate ROM in database.")
+
+if len(matches) > 1:
+    print("Found multiple matches based on checksum.")
+    print("Please select the correct match from the list below:")
+    for i, file in enumerate(matches):
+        print(f"{i}. {file}")
+    i = int(input("\nEnter number: "))
+    matches = [matches[i]]
+
+file = matches[0]
+size = db[file]['size']
+checksum = db[file]['checksum']
+crc = db[file]['crc']
+
+print(f"  - file:     {file}")
+print(f"  - size:     {size} MB")
+print(f"  - checksum: {checksum}")
+print(f"  - crc32:    {crc} ")
 
 if args.header:
     # exit here when only reading header
     print("")
+    a.sp.close()
     exit(0)
 
 # dump ROM to binary file
@@ -108,13 +117,18 @@ for sector in track(range(0, n, sector_size), "  - downloading"):
     sector_command = b'#SC' + sector.to_bytes(4, 'big') + b'$'
     for retry in range(3):
         a.write(sector_command, binary=True)
-        data = a.read(sector_size)
-        #print(data)
-        if len(data) == sector_size:
-            fout.write(data)
-            break
+        try:
+            data = a.read(sector_size, check_word=True)
+            # break if read executes cleanly
+            if len(data) == sector_size:
+                fout.write(data)
+                break
+        except:
+            pass
  
-        print(f"  - retrying sector {sector}")
+        # try bad read again with double validation
+        print(f"  - retrying sector at {sector}")
+
         if retry == 2:
             raise ValueError(f"Failed to read sector {sector} with {len(data)}/{sector_size} bytes.")
         
@@ -124,3 +138,16 @@ print("")
 
 print(f"Wrote '{file}'  in %.2f sec" % (time.time() - t0))
 
+print("\nCRC32 status is ", end='')
+fin = open(file, 'rb')
+data = fin.read(n)
+fin.close()
+
+file_crc = hex(crc32(data)).upper()[2:]
+
+status, sign = ("GOOD", "=") if file_crc == crc else ("BAD", "!")
+print(status)
+print(f"  {file_crc} (File) {sign}= {crc} (Database)\n")
+
+# close serial port
+a.sp.close()

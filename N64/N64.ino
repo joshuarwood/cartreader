@@ -18,6 +18,9 @@ void setup() {
     ;  // wait for serial port to connect. Needed for native USB port only
   }
   Serial.print("#INIT$");
+  word a = 12438;
+  word b = 44972;
+  //Serial.print(a += b);
   Serial.flush();
 
 }  // END setup()
@@ -96,16 +99,27 @@ void readRom(uint32_t addr, int size) {
 
   // send the requested size of data
   Serial.print('#');
+  word checksum = 0;
   for (int c = 0; c < size; c += 2) {
     // get word
     word w = readWord_N64();
+    // update checksum
+    if (true) {
+      checksum = w + checksum;
+    }
 
     // write to serial
     Serial.write(highByte(w));
     Serial.write(lowByte(w));
+
+
+
   }
   // Pull ale_H(PC1) high
   PORTC |= (1 << 1);
+  // write checksum
+  Serial.write(highByte(checksum));
+  Serial.write(lowByte(checksum));
   Serial.print('$');
   Serial.flush();
 

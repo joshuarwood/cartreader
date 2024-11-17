@@ -1,6 +1,7 @@
 
 import glob
 import time
+import struct
 import serial
 
 class Arduino:
@@ -19,18 +20,21 @@ class Arduino:
         self.sp = serial.Serial(
             port=self.port, baudrate=self.baud, timeout=self.timeout)
 
-        #time.sleep(0.1)
-
-
-    def read(self, num_bytes, decode_type=None):
+    def read(self, num_bytes, decode_type=None, check_word=False):
         """ Read contents with sanity checks """
-        rsp = self.sp.read(num_bytes + 2) # read bytes + 1 header byte and 1 tail byte
-        #print(rsp)
+        rsp = self.sp.read(num_bytes + 2 * check_word + 2) # read bytes + checksum word + 1 header byte and 1 tail byte
 
         if len(rsp) == 0 or chr(rsp[0]) != '#' or chr(rsp[-1]) != '$':
             raise ValueError(f"Bad response {rsp}")
         if decode_type is not None:
             return rsp.decode(decode_type)
+        if check_word:
+            words = struct.unpack(">" + len(rsp[1:-1])//2 * "H", rsp[1:-1])
+            check = sum(words[:-1]) % 65536
+            if check != words[-1]:
+                raise ValueError(f"Bad check word")
+            rsp = rsp[:-3] + rsp[-1:]
+
         return rsp[1:-1]
 
     def write(self, cmd, binary=False):
@@ -51,8 +55,8 @@ class Arduino:
         while True:
 
             # receive message
-            message = self.sp.read(6);
-            print(message)
+            message = self.sp.read(6)
+
             # break for successful connection
             if "#INIT$" in message.decode('ascii'):
                 break
