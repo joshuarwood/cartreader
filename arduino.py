@@ -20,7 +20,7 @@ class Arduino:
         self.sp = serial.Serial(
             port=self.port, baudrate=self.baud, timeout=self.timeout)
 
-    def read(self, num_bytes, decode_type=None, check_word=False):
+    def read(self, num_bytes, decode_type=None, check_word=False, check_method='double'):
         """ Read contents with sanity checks """
         rsp = self.sp.read(num_bytes + 2 * check_word + 2) # read bytes + checksum word + 1 header byte and 1 tail byte
 
@@ -29,9 +29,13 @@ class Arduino:
         if decode_type is not None:
             return rsp.decode(decode_type)
         if check_word:
-            words = struct.unpack(">" + len(rsp[1:-1])//2 * "H", rsp[1:-1])
-            check = sum(words[:-1]) % 65536
-            if check != words[-1]:
+            if check_method == 'double':
+                values = struct.unpack(">" + len(rsp[1:-1])//2 * "H", rsp[1:-3])
+            else:
+                values = rsp[1:-3]
+            checksum = sum(values) % 65536
+            rsp_checksum = struct.unpack(">H", rsp[-3:-1])[0]
+            if checksum != rsp_checksum:
                 raise ValueError(f"Bad check word")
             rsp = rsp[:-3] + rsp[-1:]
 
