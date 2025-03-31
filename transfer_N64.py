@@ -47,7 +47,7 @@ def cartridge_db():
 
 
 # command line arguments
-parser = argparse.ArgumentParser('reader_N64.py', 'Program to read N64 ROMs over USB.')
+parser = argparse.ArgumentParser('transfer_N64.py', 'Program to read N64 ROMs over USB.')
 parser.add_argument('--port', default='/dev/ttyACM0', help='Port address. Typically /dev/ttyACM0 on linux, COM# on Windows, /dev/tty.usbmodem# on Mac OS.')
 parser.add_argument('--header', action='store_true', help='Only read ROM header information.')
 args = parser.parse_args()
@@ -130,7 +130,7 @@ for sector in track(range(0, n, sector_size), "  - downloading"):
         print(f"  - retrying sector at {sector}")
 
         if retry == 2:
-            raise ValueError(f"Failed to read sector {sector} with {len(data)}/{sector_size} bytes.")
+            raise ValueError(f"Failed to read sector {sector}.")
         
     #break
 fout.close()

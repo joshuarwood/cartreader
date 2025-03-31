@@ -18,9 +18,6 @@ void setup() {
     ;  // wait for serial port to connect. Needed for native USB port only
   }
   Serial.print("#INIT$");
-  word a = 12438;
-  word b = 44972;
-  //Serial.print(a += b);
   Serial.flush();
 
 }  // END setup()
@@ -35,7 +32,7 @@ void readCommand(void) {
 
   // loop to get command from serial input
   int cnt = 0;
-  char cmd[8] = { "0" };
+  char cmd[9] = { "\0" };
   while (true) {
     // get incoming serial comm.
     if (Serial.available()) cmd[cnt++] = Serial.read();
@@ -49,13 +46,8 @@ void readCommand(void) {
     // break & continue if valid command
     if (cnt > 0 && cmd[0] == '#' && cmd[7] == '$') break;
   }
-  executeCommand(cmd);
 
-}  // END readCommand()
-
-// function to perform a specific command
-void executeCommand(char *cmd) {
-
+  // parse the command
   if (strcmp(cmd, "#SCSIZE$") == 0) {
     // get sector size used for dumping ROM
     Serial.print('#');
@@ -64,33 +56,15 @@ void executeCommand(char *cmd) {
     Serial.flush();
   } else if (strcmp(cmd, "#HEADER$") == 0) {
     // get first 64 bytes which are the ROM header
-    //Serial.println("#ABCDEFG$");
     readRom(rom_base, 64);
   } else if (strncmp(cmd, "#SC", 3) == 0) {
     // get a specific sector from the ROM
     byte bytes[4] = {cmd[6], cmd[5], cmd[4], cmd[3]};
     uint32_t *sector = (uint32_t *)bytes;
     readRom(rom_base + *sector, sector_size);
-    //Serial.print('#');
-    //Serial.print(*sector);
-    //Serial.println('$');
-  } else if (strncmp(cmd, "#DUMP", 5) == 0) {
-    // send dump size in bytes
-    uint32_t n = uint32_t(10) * (cmd[5] - 48) + (cmd[6] - 48);
-    uint32_t dump_size = n * MB;
-    Serial.print('#');
-    write32(dump_size);
-    Serial.print('$');
-  
-    // send rom contents
-    for (uint32_t addr = rom_base; addr < rom_base + dump_size; addr += sector_size) {
-      readRom(addr, sector_size);
-      break;
-    }
-
   } else Serial.println("#ERRO$");
 
-}
+} // END readCommand()
 
 void readRom(uint32_t addr, int size) {
 
@@ -104,16 +78,10 @@ void readRom(uint32_t addr, int size) {
     // get word
     word w = readWord_N64();
     // update checksum
-    if (true) {
-      checksum = w + checksum;
-    }
-
+    checksum = w + checksum;
     // write to serial
     Serial.write(highByte(w));
     Serial.write(lowByte(w));
-
-
-
   }
   // Pull ale_H(PC1) high
   PORTC |= (1 << 1);
@@ -123,17 +91,7 @@ void readRom(uint32_t addr, int size) {
   Serial.print('$');
   Serial.flush();
 
-}
-
-// function to send dummy packet instead of real data packet
-char *dummyPacket(void) {
-
-  Serial.print('#');
-  for (uint32_t i=0; i<sector_size; i++)
-    Serial.write(i % 8);
-  Serial.print('$');
-
-} // END dummyPacket()
+} // END readRom()
 
 void write32(uint32_t val) {
 
@@ -143,7 +101,7 @@ void write32(uint32_t val) {
     Serial.write(val >> 8);
     Serial.write(val);
 
-}
+} // END write32()
 
 void setup_N64_Cart() {
 

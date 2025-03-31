@@ -23,19 +23,17 @@ class Arduino:
     def read(self, num_bytes, decode_type=None, check_word=False, check_method='double'):
         """ Read contents with sanity checks """
         rsp = self.sp.read(num_bytes + 2 * check_word + 2) # read bytes + checksum word + 1 header byte and 1 tail byte
-
         if len(rsp) == 0 or chr(rsp[0]) != '#' or chr(rsp[-1]) != '$':
             raise ValueError(f"Bad response {rsp}")
         if decode_type is not None:
             return rsp.decode(decode_type)
         if check_word:
+            data = rsp[1:-3]
+            checksum = struct.unpack(">H", rsp[-3:-1])[0]
             if check_method == 'double':
-                values = struct.unpack(">" + len(rsp[1:-1])//2 * "H", rsp[1:-3])
-            else:
-                values = rsp[1:-3]
-            checksum = sum(values) % 65536
-            rsp_checksum = struct.unpack(">H", rsp[-3:-1])[0]
-            if checksum != rsp_checksum:
+                data = struct.unpack(">" + len(data)//2 * "H", data)
+            data_checksum = sum(data) % 65536
+            if checksum != data_checksum:
                 raise ValueError(f"Bad check word")
             rsp = rsp[:-3] + rsp[-1:]
 

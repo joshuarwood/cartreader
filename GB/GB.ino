@@ -47,7 +47,7 @@ void readCommand(void) {
     if (cnt > 0 && cmd[0] == '#' && cmd[7] == '$') break;
   }
 
-  // parse the command and execute
+  // parse the command
   if (strcmp(cmd, "#SCSIZE$") == 0) {
     // get sector size used for dumping ROM
     Serial.print('#');
@@ -100,8 +100,7 @@ void readRom(uint32_t addr, int size) {
     Serial.write(b);
 
     // update checksum
-    if (true)
-      checksum = b + checksum;
+    checksum = b + checksum;
   }
 
   // write checksum
