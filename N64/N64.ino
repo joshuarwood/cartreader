@@ -105,6 +105,44 @@ void write32(uint32_t val) {
 
 void setup_N64_Cart() {
 
+  // pinout
+  //
+  //   GND |  1 | GND                   GND | 26 | GND
+  //   GND |  2 | GND                   GND | 27 | GND
+  //   A15 |  3 | AD15                  AD0 | 28 | A0
+  //   A14 |  4 | AD14                  AD1 | 29 | A1
+  //   A13 |  5 | AD13                  AD2 | 30 | A2
+  //   GND |  6 | GND                   GND | 31 | GND
+  //   A12 |  7 | AD12                  AD3 | 32 | A3
+  //    D8 |  8 | WRITE               ALE_L | 33 | D37
+  //   VCC |  9 | VCC                   VCC | 34 | VCC
+  //    D9 | 10 | READ                ALE_H | 35 | D36
+  //   A11 | 11 | AD11                  AD4 | 36 | A4
+  //   A10 | 12 | AD10                  AD5 | 37 | A5
+  //    NC | 13 | 12V                   12V | 38 | NC
+  //    NC | 14 | NC                     NC | 39 | NC
+  //    A9 | 15 | AD9                   AD6 | 40 | A6
+  //    A8 | 16 | AD8                   AD7 | 41 | A7
+  //   VCC | 17 | VCC                   VCC | 42 | VCC
+  //    NC | 18 | CIC_to_PIF     PIF_to_CIC | 43 | NC
+  //    NC | 19 | EEPROM_CLK      R4300_CLK | 44 | NC
+  //   D17 | 20 | RESET                 NMI | 45 | NC
+  //    D7 | 21 | EEPROM_DATA     Video_CLK | 46 | NC
+  //   GND | 22 | GND                   GND | 47 | GND
+  //   GND | 23 | GND                   GND | 48 | GND
+  //    NC | 24 | L_Audio           R_Audio | 49 | NC
+  //   GND | 25 | GND                   GND | 50 | GND
+
+  // NC = No Connect
+  // A0-A7 corresponds to Port F
+  // A8-A15 corresponds to Port K
+  // D17 (Port H, 0) = RESET
+  // D7  (Port H, 4) = EEPROM_DATA
+  // D8  (Port H, 5) = WRITE
+  // D9  (Port H, 6) = READ
+  // D37 (Port C, 0) = ALE_L
+  // D36 (Port C, 1) = ALE_H
+
   // Set A0-A7 Pins to Output and set them low
   DDRF = 0xFF;
   PORTF = 0x00;
