@@ -143,7 +143,7 @@ fin = open(file, 'rb')
 data = fin.read(n)
 fin.close()
 
-file_crc = hex(crc32(data)).upper()[2:]
+file_crc = ("%08x" % crc32(data)).upper()
 
 status, sign = ("GOOD", "=") if file_crc == crc else ("BAD", "!")
 print(status)
